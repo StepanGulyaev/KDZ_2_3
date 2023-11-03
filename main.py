@@ -1,13 +1,15 @@
 import numpy as np
-
+import operator
 from graphics import *
 
-A = [[5,4,3,2],
-     [1,4,4,7]]
+#A = [[5,4,3,2],
+     #[1,4,4,7]]
+
+A = [[5,3.4,3,2],
+     [1,3.4,4,7]]
 
 def get_p_strategies(A : list):
     p_strategy = []
-
     for i in range(len(A[0])):
         B_coef_p = A[0][i] - A[1][i]
         B_free_coef = A[1][i]
@@ -23,7 +25,7 @@ def get_p_strategies(A : list):
     return  p_strategy
 
 def get_saddle_point(p_strategy : list):
-    x = np.arange(0,1,0.0001)
+    x = np.arange(0,1,0.0000001)
     global_mins = []
     for x_point in x:
         local_mins = []
@@ -45,37 +47,53 @@ def get_saddle_point(p_strategy : list):
 def get_active_strategies(saddle_point : list, p_strategy):
     active_strategies = {}
     for i in range(len(p_strategy) - 1):
-        for j in range(i,len(p_strategy)):
-            xa1 = p_strategy[i][0][0]
-            xb1 = p_strategy[i][1][0]
-            ya1 = p_strategy[i][0][1]
-            yb1 = p_strategy[i][1][1]
-            y1 = ((saddle_point[0]-xa1)/(xb1-xa1))*(yb1-ya1) + ya1
+        xa = p_strategy[i][0][0]
+        xb = p_strategy[i][1][0]
+        ya = p_strategy[i][0][1]
+        yb = p_strategy[i][1][1]
+        y = ((saddle_point[0]-xa)/(xb-xa))*(yb-ya) + ya
+        if abs(y - saddle_point[1]) < 0.0000001:
+            active_strategies.update({"B" + str(i+1):p_strategy[i]})
 
-            xa2 = p_strategy[j][0][0]
-            xb2 = p_strategy[j][1][0]
-            ya2 = p_strategy[j][0][1]
-            yb2 = p_strategy[j][1][1]
-            y2 = ((saddle_point[0]-xa2)/(xb2-xa2))*(yb2-ya2) + ya2
-            if abs(y2 - y1) < 0.001 and abs(y1 - saddle_point[1]) < 0.001:
-                active_strategies.update({"B" + str(i+1):p_strategy[i]})
-                active_strategies.update({"B" + str(j+1): p_strategy[j]})
+    if len(active_strategies) > 2:
+        filtered_strategies = {}
+        x_minus_delta_min = {}
+        x_plus_delta_min = {}
+        for strat in active_strategies:
+            xa = active_strategies[strat][0][0]
+            xb = active_strategies[strat][1][0]
+            ya = active_strategies[strat][0][1]
+            yb = active_strategies[strat][1][1]
+            x_plus_delta = saddle_point[0] + 0.0000001
+            x_minus_delta = saddle_point[0] - 0.0000001
+            y_plus_delta = ((x_plus_delta -xa)/(xb-xa))*(yb-ya) + ya
+            y_minus_delta = ((x_minus_delta -xa)/(xb-xa))*(yb-ya) + ya
+            x_minus_delta_min.update({strat:y_minus_delta})
+            x_plus_delta_min.update({strat:y_plus_delta})
+        min_delta_minus = min(x_minus_delta_min.items(), key = operator.itemgetter(1))[0]
+        min_delta_plus = min(x_plus_delta_min.items(), key = operator.itemgetter(1))[0]
+        filtered_strategies.update({min_delta_minus:active_strategies[min_delta_minus]})
+        filtered_strategies.update({min_delta_plus:active_strategies[min_delta_plus]})
+        active_strategies = filtered_strategies
+
     return active_strategies
 
 def get_q_strategies(A, active_strategies_names : list):
     num_strat = list(map(lambda x: int(x[1:]) - 1,active_strategies_names))
     q_strategy = []
     for i in range(len(A)):
-        B_coef_q = A[i][num_strat[0]] - A[i][num_strat[1]]
-        B_free_coef_q = A[i][num_strat[1]]
+        if len(num_strat) == 2:
 
-        H_0 = B_coef_q * 0 + B_free_coef_q
-        H_1 = B_coef_q * 1 + B_free_coef_q
+            B_coef_q = A[i][num_strat[0]] - A[i][num_strat[1]]
+            B_free_coef_q = A[i][num_strat[1]]
 
-        B_0_point = [[0, H_0], [1, H_1]]
-        q_strategy.append(B_0_point)
+            H_0 = B_coef_q * 0 + B_free_coef_q
+            H_1 = B_coef_q * 1 + B_free_coef_q
 
-        print("f(" + str(i + 1) + "," + "q)" + "= " + str(B_coef_q) + "*q1" + " + " + str(B_free_coef_q))
+            B_0_point = [[0, H_0], [1, H_1]]
+            q_strategy.append(B_0_point)
+
+            print("f(" + str(i + 1) + "," + "q)" + "= " + str(B_coef_q) + "*q1" + " + " + str(B_free_coef_q))
 
     return q_strategy
 
