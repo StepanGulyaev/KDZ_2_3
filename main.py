@@ -1,12 +1,14 @@
+import math
+
 import numpy as np
 import operator
 from graphics import *
+import random
 
-#A = [[5,4,3,2],
-     #[1,4,4,7]]
+A = [[5,4,3,2],
+     [1,4,4,7]]
 
-A = [[5,3.4,3,2],
-     [1,3.4,4,7]]
+delta = 0.0001
 
 def get_p_strategies(A : list):
     p_strategy = []
@@ -25,9 +27,10 @@ def get_p_strategies(A : list):
     return  p_strategy
 
 def get_saddle_point(p_strategy : list):
-    x = np.arange(0,1,0.0000001)
+    x = np.arange(0,1+delta,delta)
     global_mins = []
-    for x_point in x:
+    for x_point_step in x:
+        x_point = round(x_point_step,len(str(delta))-2)
         local_mins = []
         for strategy in p_strategy:
             xa = strategy[0][0]
@@ -46,13 +49,13 @@ def get_saddle_point(p_strategy : list):
 
 def get_active_strategies(saddle_point : list, p_strategy):
     active_strategies = {}
-    for i in range(len(p_strategy) - 1):
+    for i in range(len(p_strategy)):
         xa = p_strategy[i][0][0]
         xb = p_strategy[i][1][0]
         ya = p_strategy[i][0][1]
         yb = p_strategy[i][1][1]
         y = ((saddle_point[0]-xa)/(xb-xa))*(yb-ya) + ya
-        if abs(y - saddle_point[1]) < 0.0000001:
+        if abs(y - saddle_point[1]) <= 4*delta:
             active_strategies.update({"B" + str(i+1):p_strategy[i]})
 
     if len(active_strategies) > 2:
@@ -64,8 +67,8 @@ def get_active_strategies(saddle_point : list, p_strategy):
             xb = active_strategies[strat][1][0]
             ya = active_strategies[strat][0][1]
             yb = active_strategies[strat][1][1]
-            x_plus_delta = saddle_point[0] + 0.0000001
-            x_minus_delta = saddle_point[0] - 0.0000001
+            x_plus_delta = saddle_point[0] + delta
+            x_minus_delta = saddle_point[0] - delta
             y_plus_delta = ((x_plus_delta -xa)/(xb-xa))*(yb-ya) + ya
             y_minus_delta = ((x_minus_delta -xa)/(xb-xa))*(yb-ya) + ya
             x_minus_delta_min.update({strat:y_minus_delta})
@@ -145,6 +148,63 @@ if __name__ == '__main__':
 
     game_worth = saddle_point[1]
     print("Цена игры: " + str(game_worth))
+
+    print("Работа имитационной модели:")
+
+    print("\nCпрос изменяется в активных стратегиях")
+    N = 10000
+    s = 0
+    s = kP1 = kP2 = kQ3 = kQ4 = 0
+    for i in range(N):
+        p_ = random.uniform(0, 1)
+        q_ = random.uniform(0, 1)
+        if p_ <= p_optimal[0]:
+            chooseP = 0
+            kP1 += 1
+        else:
+            chooseP = 1
+            kP2 += 1
+
+        if q_ <= q_optimal_vector[0]:
+            chooseQ = 0
+            kQ3 += 1
+        else:
+            chooseQ = 2
+            kQ4 += 1
+        s += A[chooseP][chooseQ]
+    print("Количество реализаций p стратегий:", [kP1 / N, kP2 / N])
+    print("Количество реализаций q стратегий:", [kQ3 / N, 0,kQ4 / N, 0])
+    print(f"Значение среднего выигрыша игрока 1 ({N} партий):", s / N)
+
+    # спрос изменяется во всех стратегиях
+    print("\nCпрос изменяется во всех стратегиях")
+    s = 0
+    s = kP1 = kP2 = kQ1 = kQ2 = kQ3 = kQ4 = 0
+    for i in range(N):
+        p_ = random.uniform(0, 1)
+        q_ = random.uniform(0, 1)
+        if p_ <= p_optimal[0]:
+            chooseP = 0
+            kP1 += 1
+        else:
+            chooseP = 1
+            kP2 += 1
+        if q_ <= 0.3:
+            chooseQ = 0
+            kQ1 += 1
+        elif 0.3 < q_ <= 0.4:
+            chooseQ = 1
+            kQ2 += 1
+        elif 0.4 < q_ <= 0.5:
+            chooseQ = 0
+            kQ3 += 1
+        elif q_ > 0.5:
+            chooseQ = 2
+            kQ4 += 1
+        s += A[chooseP][chooseQ]
+    print("Количество реализаций p стратегий:", [kP1 / N, kP2 / N])
+    print("Количество реализаций q стратегий:",[kQ1 / N, kQ2 / N, kQ3 / N, kQ4 / N])
+    print(f"Значение среднего выигрыша игрока 1 ({N} партий):", s / N)
 
     windows_size = (9,9)
     plt.figure(figsize=windows_size)
